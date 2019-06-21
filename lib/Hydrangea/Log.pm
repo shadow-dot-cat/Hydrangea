@@ -1,7 +1,7 @@
-package Hyndrangea::Log;
+package Hydrangea::Log;
 
-use Exporter 'import';
 use Hydrangea::Package;
+use Exporter 'import';
 
 our @EXPORT = qw(log);
 
