@@ -1,9 +1,9 @@
-package Hydrangea::Class;
+package Hydrangea::Role;
 
 use Import::Into;
 
 sub import {
-  Mu->import::into(1);
+  Mu::Role->import::into(1);
   Hydrangea::Package->import::into(1);
 }
 
