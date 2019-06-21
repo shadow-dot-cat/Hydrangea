@@ -1,0 +1,22 @@
+use strictures 2;
+use Hydrangea::Loop;
+use experimental 'signatures';
+use IO::Async::Protocol::LineStream;
+use IO::Async::Stream;
+
+package MyThing {
+  use Hydrangea::Class;
+  with 'Hydrangea::Role::CPC';
+
+  around hcl_commands => sub ($orig, $self, @) { ($orig->$self, '_exit') };
+
+  sub cmd__exit ($self) { exit(0) }
+}
+
+my $thing = MyThing->new(
+  stream => IO::Async::Protocol::LineStream->new(
+    transport => IO::Async::Stream->new_for_stdio
+  )
+);
+
+$Loop->run;

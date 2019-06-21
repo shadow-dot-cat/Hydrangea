@@ -23,8 +23,6 @@ lazy hcl => sub ($self) {
 sub BUILD ($self, $) {
   my $stream = $self->stream;
   log debug => 'Control port connection start';
-  bless($stream, use_module('IO::Async::Protocol::LineStream'))
-    unless $stream->isa('IO::Async::Protocol::LineStream');
   $stream->configure(
     on_read_line => sub {
       my ($stream, $line) = @_;
@@ -32,6 +30,7 @@ sub BUILD ($self, $) {
       $self->exec_line($line);
     },
   );
+  loop_add $stream;
 }
 
 sub exec_line ($self, $line) {
