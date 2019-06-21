@@ -4,13 +4,13 @@ use Import::Into;
 use curry ();
 
 sub import {
-  Mu->import(1);
-  Hydrangea::Loop->import(1);
-  Object::Tap->import(1);
-  Safe::Isa->import(1);
-  Scalar::Util->import(1, 'weaken');
-  Module::Runtime->import(1, 'use_module');
-  experimental->import('signatures');
+  Mu->import::into(1);
+  Hydrangea::Loop->import::into(1);
+  Object::Tap->import::into(1);
+  Safe::Isa->import::into(1);
+  Scalar::Util->import::into(1, 'weaken');
+  Module::Runtime->import::into(1, 'use_module');
+  experimental->import::into('signatures');
 }
 
 1;

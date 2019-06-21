@@ -61,7 +61,7 @@ sub closed ($self) { $self->clear_run_f->fail }
 
 lazy run_f => sub { Future->new }, clearer => 1;
 
-sub once ($self) {
+sub start ($self) {
   my $run_f = $self->run_f;
   $self->irc
        ->connect(host => $self->server, service => $self->port)

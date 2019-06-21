@@ -16,8 +16,8 @@ lazy listener => sub ($self) {
   use_module('IO::Async::Listener')->new(
     handle => $socket,
     on_stream => $self->curry::weak::incoming_stream,
-  )->$_tap(sub { $Loop->add($_[0]) });
-};
+  )->$_loop_add;
+}, clearer => 1;
 
 sub incoming_stream ($self, $stream) {
   my $conn = use_module('Hydrangea::Root::ControlPort::Connection')->new(
@@ -29,6 +29,22 @@ sub incoming_stream ($self, $stream) {
     on_closed => sub { delete $self->_streams->{$stream} },
   );
   return;
+}
+
+sub start ($self) {
+  $self->listener;
+  return;
+}
+
+sub stop ($self) {
+  return unless my $l = $self->clear_listener;
+  $l->$_loop_remove->close;
+  return;
+}
+
+sub DEMOLISH ($self, $gd) {
+  return if $gd;
+  $self->stop;
 }
 
 1;

@@ -4,7 +4,7 @@ use strictures 2;
 use IO::Async::Loop;
 use Exporter 'import';
 
-our @EXPORT = (*Loop $_loop_add $_loop_remove loop_add loop_remove);
+our @EXPORT = qw(*Loop $_loop_add $_loop_remove loop_add loop_remove);
 our @EXPORT_OK = qw(set_loop with_loop);
 
 our $Loop = IO::Async::Loop->new;

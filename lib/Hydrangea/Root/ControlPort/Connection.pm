@@ -14,7 +14,7 @@ lazy hcl => sub ($self) {
   Hydrangea::HCL->new(
     commands => {
       map +($_ => $self->$curry::weak("cmd_$_")).
-        qw(config service subscribe unsubscribe)
+        qw(config service subscribe unsubscribe say)
     },
   )
 };
@@ -115,8 +115,8 @@ sub _cmd_config_tx_diff ($self) {
   return '' unless $self->has_tx;
   $self->_traverse_tx(
     change => sub ($svc, $prop, $old, $new) {
-      say "-${svc}.${prop} = $old";
-      say "+${svc}.${prop} = $new";
+      $self->say("-${svc}.${prop} = $old");
+      $self->say("+${svc}.${prop} = $new");
     },
   );
 }
@@ -125,10 +125,10 @@ sub _cmd_config_tx_actions ($self) {
   return '' unless $self->has_tx;
   $self->_traverse_tx(
     change => sub ($svc, $prop, $old, $new) {
-      say "${svc}.${prop} = change(${old} => ${new})";
+      $self->say("${svc}.${prop} = change(${old} => ${new})");
     },
     apply => sub ($svc, @sync) {
-      say "apply $svc ".join(' ', sort uniq @sync);
+      $self->say("apply $svc ".join(' ', sort uniq @sync));
     },
   );
 }
@@ -150,6 +150,12 @@ sub _cmd_config_tx_commit ($self) {
   );
   $self->clear_tx;
   return;
+}
+
+sub cmd_say { shift->say(@_) }
+
+sub say ($self, $to_say) {
+  $self->stream->write($to_say."\n");
 }
 
 1;

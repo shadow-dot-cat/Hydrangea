@@ -13,14 +13,14 @@ lazy chat_client_class => sub ($self) {
 lazy config_spec => sub ($self) {
   my $cc_class = $self->chat_client_class;
   return +{
-    irc => $cc_class->config_spec,
+    lc($self->chat_client_type) => $cc_class->config_spec,
   };
 };
 
 lazy config => sub { {} };
 
 lazy chat_client => sub ($self) {
-  my $cc = $self->cc_class->new;
+  my $cc = $self->chat_client_class->new;
   $cc->on(receive_message => $self->curry::weak::receive_message);
   $self->on(send_message => $cc->curry::weak::send_message);
 });
@@ -43,5 +43,7 @@ sub receive_message ($self, $from, $msg) {
 sub send_message ($self, $to, $msg) {
   $self->emit('send_message', $to, $msg);
 }
+
+## These are probably ::Node methods or ::Role::Node methods or something
 
 1;
