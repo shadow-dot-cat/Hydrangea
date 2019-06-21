@@ -18,9 +18,9 @@ sub with_loop (&$) {
   $_[0]->();
 }
 
-my $_loop_add = sub { $Loop->add($_[0]); $_[0] };
+our $_loop_add = sub { $Loop->add($_[0]); $_[0] };
 
-my $_loop_remove = sub { $Loop->remove($_[0]); $_[0] };
+our $_loop_remove = sub { $Loop->remove($_[0]); $_[0] };
 
 sub loop_add { $Loop->add($_[0]); $_[0] }
 

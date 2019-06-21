@@ -10,7 +10,7 @@ sub import {
   Safe::Isa->import::into(1);
   Scalar::Util->import::into(1, 'weaken');
   Module::Runtime->import::into(1, 'use_module');
-  experimental->import::into('signatures');
+  experimental->import::into(1, 'signatures');
 }
 
 1;
