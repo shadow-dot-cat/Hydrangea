@@ -17,7 +17,7 @@ sub parse ($self, $line) {
     elsif (/^(?:\d*\.\d+|\d+\.)(?:e-?\d+)?|-?\d+e-?\d+$/) { 'float' }
     elsif (/^[^ '"\{\[\(]\s+$/) { 'symbol' }
     else { die "WHUT" }
-  }, $_ ] @split;
+  }, $_ ], @split;
 }
 
 1;

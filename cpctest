@@ -8,7 +8,7 @@ package MyThing {
   use Hydrangea::Class;
   with 'Hydrangea::Role::CPC';
 
-  around hcl_commands => sub ($orig, $self, @) { ($orig->$self, '_exit') };
+  around hcl_commands => sub ($orig, $self, @) { ($self->$orig, '_exit') };
 
   sub cmd__exit ($self) { exit(0) }
 }

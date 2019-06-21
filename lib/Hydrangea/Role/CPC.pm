@@ -2,6 +2,7 @@ package Hydrangea::Role::CPC;
 
 use JSON::Dumper::Compact 'jdc';
 use List::Util qw(uniq);
+use Hydrangea::HCL;
 use Hydrangea::Role;
 
 ro 'stream';
