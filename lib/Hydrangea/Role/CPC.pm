@@ -1,4 +1,4 @@
-package Hydrangea::Root::ControlPort::Connection;
+package Hydrangea::Role::CPC;
 
 use JSON::Dumper::Compact 'jdc';
 use List::Util qw(uniq);
@@ -7,6 +7,12 @@ use Hydrangea::Class;
 ro 'node';
 ro 'stream';
 
+lazy service_names => sub ($self) { 
+  map +($_ => 1), qw(node connector listener);
+};
+
+sub hcl_commands { qw(say) }
+
 lazy tx => sub { +{ changes => [], requires => {} } },
   predicate => 1, clearer => 1;
 
@@ -14,13 +20,14 @@ lazy hcl => sub ($self) {
   Hydrangea::HCL->new(
     commands => {
       map +($_ => $self->$curry::weak("cmd_$_")).
-        qw(config service subscribe unsubscribe say)
+        $self->hcl_commands,
     },
   )
 };
 
 sub BUILD ($self) {
-  bless($self->stream, use_module('IO::Async::Protocol::LineStream'));
+  bless($self->stream, use_module('IO::Async::Protocol::LineStream'))
+    unless $self->stream->isa('IO::Async::Protocol::LineStream');
   $stream->configure(
     on_read_line => sub {
       my ($stream, $line) = @_;
@@ -30,10 +37,8 @@ sub BUILD ($self) {
   );
 }
 
-my %service_names = map +($_ => 1), qw(node connector listener);
-
 sub cmd_service ($self, $service, @cmd) {
-  die "No such service" unless $service_names{$service};
+  die "No such service $service" unless $self->service_names->{$service};
   my ($cmd, @args) = @cmd;
   $self->node->$service->$cmd(@args);
 }
