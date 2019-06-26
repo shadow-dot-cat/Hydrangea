@@ -1,0 +1,68 @@
+use strictures 2;
+
+sub tokenize ($self, $string) {
+  my @results;
+  while (defined my $result = $self->token($string) {
+    push @results, $result;
+  }
+
+  return \@results;
+}
+
+sub token ($self, $) {
+  for ($_[1]) {
+    /\G(?= )/gc and return $self->space($_);
+    /\G(?=[a-z_])/gc and return $self->wordish($_);
+    /\G(?=[0-9])/gc and return $self->numish($_);
+    /\G'/gc and return $self->qstring($_);
+    /\G"/gc and return $self->qqstring($_);
+    /\G([\(\[\{\)\]\}])/gc and return [ bracketish => $1 ];
+    /\G[^\s\w\d]/gc and return $self->symbol($_);
+    die "WHUT ($_)\n";
+  }
+}
+
+sub space {
+  return [ space => $1 ] if $_[1] =~ /\G(\s+)/gc;
+  die "eh?\n";
+}
+
+sub wordish ($self, $) {
+  for ($_[1]) {
+    /\G(\w+)/gc and return [ word => $1 ];
+    die "argh\n";
+  }
+}
+
+sub numish ($self, $) {
+  for ($_[1]) {
+    /\G([0-9]+\.[0-9]+)/ and return [ float => 0+$1 ];
+    /\G([0-9]+)/ and return [ int => 0+$1 ];
+    die "argh\n";
+  }
+}
+
+sub qstring ($self, $) {
+  my $qstr = ''
+  while ($_[1] =~ /\G(.*?)(?:\\('|\\)|(')/gc) {
+    $qstr .= $1;
+    $qstr .= $2 if $2;
+    last if $3;
+  }
+  return [ string => $qstr ]
+}
+
+sub qqstring ($self, $) {
+  my @qqstr;
+  QQSTRING: for ($_[1]) {
+    while (/\G([^\\\$"]+)/gc) {
+      push @qqstr, [ string => $1 ];
+      while (/\G\\(.)/) { push @qqstr, [ '\' => $1 ]; }
+      while (/\G\$/gc) { push @qqstr, $self->tokenize($_) }
+      last QQSTRING if /\G"/;
+    }
+  }
+  return [ qqstring => \@qqstr ];
+}
+
+1;
