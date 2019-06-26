@@ -6,7 +6,8 @@ use Exporter 'import';
 our @EXPORT = qw(log);
 
 sub log ($level, @log) {
-  warn "[${level}] @{log}\n";
+  (my $str = "[${level}] @{log}\n") =~ s/\n\n$/\n/sm;
+  warn $str;
 }
 
 1;
