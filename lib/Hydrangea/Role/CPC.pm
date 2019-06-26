@@ -7,6 +7,8 @@ use Hydrangea::Role;
 
 ro 'stream';
 
+with 'Role::EventEmitter';
+
 sub hcl_commands { qw(say) }
 
 lazy tx => sub { +{ changes => [], requires => {} } },
@@ -28,7 +30,9 @@ sub BUILD ($self, $) {
     on_read_line => sub {
       my ($stream, $line) = @_;
       log debug => 'Control port exec line: '.$line;
-      $self->exec_line($line);
+      unless (eval { $self->exec_line($line); 1 }) {
+        log error => $@;
+      }
     },
   );
   loop_add $stream;

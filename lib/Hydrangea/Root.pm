@@ -17,6 +17,10 @@ lazy config_spec => sub ($self) {
   };
 };
 
+sub has_service ($self, $name) {
+  exists $self->config_spec->{$name};
+}
+
 lazy config => sub { {} };
 
 lazy chat_client => sub ($self) {

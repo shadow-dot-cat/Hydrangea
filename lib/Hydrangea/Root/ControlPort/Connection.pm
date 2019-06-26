@@ -4,36 +4,19 @@ use JSON::Dumper::Compact 'jdc';
 use List::Util qw(uniq);
 use Hydrangea::Class;
 
+with 'Hydrangea::Role::CPC';
+
 ro 'node';
-ro 'stream';
 
 lazy tx => sub { +{ changes => [], requires => {} } },
   predicate => 1, clearer => 1;
 
-lazy hcl => sub ($self) {
-  Hydrangea::HCL->new(
-    commands => {
-      map +($_ => $self->$curry::weak("cmd_$_")).
-        qw(config service subscribe unsubscribe say)
-    },
-  )
-};
-
-sub BUILD ($self) {
-  bless($self->stream, use_module('IO::Async::Protocol::LineStream'));
-  $stream->configure(
-    on_read_line => sub {
-      my ($stream, $line) = @_;
-      $self->_streams->{$stream} = $stream;
-      $conn->exec_line($line);
-    },
-  );
+around hcl_commands => sub ($orig, $self, @) {
+  ($self->$orig, qw(config subscribe unsubscribe service))
 }
 
-my %service_names = map +($_ => 1), qw(node connector listener);
-
 sub cmd_service ($self, $service, @cmd) {
-  die "No such service" unless $service_names{$service};
+  die "No such service ${service}" unless $self->node->has_service($service);
   my ($cmd, @args) = @cmd;
   $self->node->$service->$cmd(@args);
 }
@@ -46,17 +29,13 @@ sub DEMOLISH ($self, $gd) {
 }
 
 sub cmd_subscribe ($self, $event) {
-  $self->_sub_ids->{$event} = $self->root->on(
+  $self->_sub_ids->{$event} = $self->node->on(
     $event => sub { $self->stream->write(sub { jdc $_[0] }) }.
   );
 }
 
 sub cmd_unsubscribe ($self, $event) {
-  $self->root->unsubscribe(delete $self->_sub_ids->{$event});
-}
-
-sub exec_line ($self, $line) {
-  $self->hcl->exec_line($line);
+  $self->node->unsubscribe(delete $self->_sub_ids->{$event});
 }
 
 sub cmd_config ($self, @config) {
@@ -72,8 +51,8 @@ sub cmd_config ($self, @config) {
   if (defined(my $err = $this_spec->{isa}->validate($value))) {
     die "Config value ${svc}.${name} invalid: ${err}";
   }
-  my $root = $self->root;
-  my $prev = $root->$svc->$name;
+  my $node = $self->root;
+  my $prev = $node->$svc->$name;
   push(
     @{$self->tx->{changes}},
     [ $svc, $name, $prev, $value, $this_spec ],
@@ -137,12 +116,12 @@ sub _cmd_config_tx_commit ($self) {
   $self->_traverse_tx(
     change => sub ($svc, $prop, $old, $new) {
       die "Concurrency error; bailing out\n"
-        unless $self->root->$svc->$prop eq $old;
+        unless $self->node->$svc->$prop eq $old;
     }
   );
   $self->_traverse_tx(
     change => sub ($svc, $prop, $old, $new) {
-      $self->root->$svc->$prop($new);
+      $self->node->$svc->$prop($new);
     },
     apply => sub ($svc, @sync) {
       $svc->apply(@sync);
@@ -151,8 +130,6 @@ sub _cmd_config_tx_commit ($self) {
   $self->clear_tx;
   return;
 }
-
-sub cmd_say { shift->say(@_) }
 
 sub say ($self, $to_say) {
   $self->stream->write($to_say."\n");
