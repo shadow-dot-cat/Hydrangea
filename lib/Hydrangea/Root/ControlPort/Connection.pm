@@ -44,7 +44,7 @@ sub cmd_subscribe ($self, $event) {
 }
 
 sub cmd_unsubscribe ($self, $event) {
-  $self->node->unsubscribe(delete $self->_sub_ids->{$event});
+  $self->node->unsubscribe($event, delete $self->_sub_ids->{$event});
 }
 
 sub cmd_config ($self, @config) {
@@ -173,7 +173,7 @@ sub say ($self, $to_say) {
 }
 
 sub cmd_send ($self, $to, $msg) {
-  $self->node->send_message($to, $msg);
+  $self->node->send_message($to, { text => $msg });
 }
 
 1;

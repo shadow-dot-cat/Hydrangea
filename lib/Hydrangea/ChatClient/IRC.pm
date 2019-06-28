@@ -56,7 +56,10 @@ sub DEMOLISH ($self, $gd) {
   loop_remove($self->irc)
 }
 
-sub closed ($self, @) { $self->clear_run_f->fail("closed") }
+sub closed ($self, @) {
+  return unless my $run_f = $self->clear_run_f;
+  $run_f->fail("closed");
+}
 
 lazy run_f => sub { Future->new }, clearer => 1;
 
@@ -76,8 +79,8 @@ sub start ($self) {
 }
 
 sub stop ($self) {
-  $self->clear_irc->$_loop_remove->close;
   $self->clear_run_f->done;
+  $self->clear_irc->$_loop_remove->close;
   Future->done;
 }
 
@@ -101,6 +104,10 @@ sub receive_message ($self, $, $message, $hints) {
     }
   );
   $self->emit(receive_message => @msg);
+}
+
+sub send_message ($self, $, $to, $msg) {
+  $self->irc->do_PRIVMSG(target => $to, text => $msg->{text});
 }
 
 sub infer_user_from { undef }
