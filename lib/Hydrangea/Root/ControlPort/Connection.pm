@@ -12,8 +12,8 @@ lazy tx => sub { +{ changes => [], requires => {} } },
   predicate => 1, clearer => 1;
 
 around hcl_commands => sub ($orig, $self, @) {
-  ($self->$orig, qw(config subscribe unsubscribe service))
-}
+  ($self->$orig, qw(config subscribe unsubscribe service send))
+};
 
 sub cmd_service ($self, $service, @cmd) {
   die "No such service ${service}" unless $self->node->has_service($service);
@@ -30,7 +30,7 @@ sub DEMOLISH ($self, $gd) {
 
 sub cmd_subscribe ($self, $event) {
   $self->_sub_ids->{$event} = $self->node->on(
-    $event => sub { $self->stream->write(sub { jdc $_[0] }) }.
+    $event => sub { $self->stream->write(sub { jdc($_[0]) }) },
   );
 }
 
@@ -39,7 +39,7 @@ sub cmd_unsubscribe ($self, $event) {
 }
 
 sub cmd_config ($self, @config) {
-  if (my $meth = $self->can("${\"_cmd_config_$config[0]"}")) {
+  if (my $meth = $self->can("_cmd_config_$config[0]")) {
     shift @config;
     return $self->$meth(@config);
   }
@@ -47,12 +47,11 @@ sub cmd_config ($self, @config) {
   my $existing = $self->config;
   my $cfg_spec = $self->config_spec;
   my $this_spec = $cfg_spec->{$svc}{$name};
-  die "No such attribute ${svc}.${name}\n" unless $this_config;
+  die "No such attribute ${svc}.${name}\n" unless $this_spec;
   if (defined(my $err = $this_spec->{isa}->validate($value))) {
     die "Config value ${svc}.${name} invalid: ${err}";
   }
-  my $node = $self->root;
-  my $prev = $node->$svc->$name;
+  my $prev = $self->node->$svc->$name;
   push(
     @{$self->tx->{changes}},
     [ $svc, $name, $prev, $value, $this_spec ],
@@ -133,6 +132,10 @@ sub _cmd_config_tx_commit ($self) {
 
 sub say ($self, $to_say) {
   $self->stream->write($to_say."\n");
+}
+
+sub cmd_send ($self, $to, $msg) {
+  $self->node->send_message($to, $msg);
 }
 
 1;

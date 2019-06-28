@@ -2,7 +2,7 @@ package Hydrangea::Supervisor;
 
 use Hydrangea::Class;
 use Future::Utils qw(repeat);
-use List::Utils qw(min);
+use List::Util qw(min);
 
 ro backoff_plan => (default => sub { [ 30, 60, 300, 600, 1800, 3600 ] });
 
@@ -41,7 +41,7 @@ rwp [ qw(starting_f running_f stopping_f) ] => (
   trigger => 1,
 );
 
-lazy 'supervising_f' => (clearer => 1);
+lazy 'supervising_f' => ('_build_supervising_f' => clearer => 1);
 
 sub _trigger_starting_f ($self, $f) {
   $f->on_ready($self->curry::weak::clear_starting_f);
@@ -94,7 +94,7 @@ sub _build_supervising_f ($self) {
       Future->new->$_tap(sub ($wait_f) {
         $Loop->watch_time(
           after => $self->next_backoff_value,
-          code => $wait_f->curry::done;
+          code => $wait_f->curry::done,
         );
       })
     );

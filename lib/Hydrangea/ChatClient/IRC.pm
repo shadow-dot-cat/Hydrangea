@@ -5,10 +5,9 @@ use Types::Standard qw(Dict Str Int ArrayRef Optional);
 
 use Type::Utils qw(subtype as coerce from via);
 
-my $_channels = subtype(
-  as ArrayRef[Str],
-    coerce from Str, via { [ split(/[, ]+/, $_[0]) ] }
-);
+my $_channels = (ArrayRef[Str])->plus_coercions(
+                  Str, sub { [ split(/[, ]+/, $_[0]) ] }
+                );
 
 use Hydrangea::Class;
 

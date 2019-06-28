@@ -11,9 +11,6 @@ with 'Role::EventEmitter';
 
 sub hcl_commands { qw(say) }
 
-lazy tx => sub { +{ changes => [], requires => {} } },
-  predicate => 1, clearer => 1;
-
 lazy hcl => sub ($self) {
   Hydrangea::HCL->new(
     commands => {

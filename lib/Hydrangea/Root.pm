@@ -1,14 +1,55 @@
 package Hydrangea::Root;
 
+use JSON::Dumper::Compact;
+use Mojo::File;
 use Hydrangea::Class;
 
 with 'Role::EventEmitter';
+with 'Hydrangea::Role::ServiceManager';
+
+ro 'name';
 
 ro 'chat_client_type';
+
+ro base_dir => builder => sub {
+  require FindBin;
+  require Cwd;
+  require File::Spec;
+  my $dir = File::Spec->updir(Cwd::abs_path($FindBin::Bin));
+};
+
+lazy chat_service_name => sub ($self) { lc($self->chat_client_type) };
 
 lazy chat_client_class => sub ($self) { 
   use_module('Hydrangea::ChatClient::'.$self->chat_client_type)
 };
+
+sub chat_service ($self) { $self->service($self->chat_service_name) }
+
+lazy service_spec => sub ($self) {
+  return +{
+    $self->chat_service_name => $self->chat_client_class,
+  };
+};
+
+sub _build_services ($self) {
+  return +{
+    map +($_ => $self->_construct_service($_)), keys %{$self->service_spec}
+  };
+}
+
+sub _construct_service ($self, $name) {
+  my $service_spec = $self->service_spec->{$name};
+  my $config_spec = use_module($service_spec)->config_spec;
+  my $this_config = $self->config->{$name};
+  $self->validate_config($this_config, $config_spec);
+  return $service_spec->new($this_config);
+}
+
+sub validate_config {
+  # I keep getting writer's block on this bit
+  return 1;
+}
 
 lazy config_spec => sub ($self) {
   my $cc_class = $self->chat_client_class;
@@ -21,22 +62,36 @@ sub has_service ($self, $name) {
   exists $self->config_spec->{$name};
 }
 
-lazy config => sub { {} };
+lazy file_base => sub ($self) {
+  "root.${\$self->chat_service_name}.${\$self->name}";
+};
 
-lazy chat_client => sub ($self) {
-  my $cc = $self->chat_client_class->new;
+lazy config_file => sub ($self) {
+  path($self->base_dir)->child('etc')->child($self->file_base.'.conf');
+};
+
+lazy config => sub ($self) {
+  my $conf = do { local (@ARGV, $/) = ($self->config_file); <> };
+  JSON::Dumper::Compact->decode($conf);
+};
+
+lazy control_socket => sub ($self) {
+  path($self->base_dir)->child('var', 'run')->mkpath
+    ->file($self->file_base.'.sock');
+};
+
+lazy control_port => sub ($self) {
+  my $path = ''.$self->control_socket;
+  Hydrangea::Root::ControlPort->new(
+    root => $self,
+    path => $path
+  );
+};
+
+sub BUILD ($self) {
+  my $cc = $self->chat_service;
   $cc->on(receive_message => $self->curry::weak::receive_message);
   $self->on(send_message => $cc->curry::weak::send_message);
-});
-
-rw control_socket => (required => 0);
-
-sub run ($self) {
-  $self->chat_client(Hydrange::Supervisor->wrap(use_module(
-    'Hydrangea::ChatClient::'.ucfirst($client_type)
-  )->from_config($self->config)));
-  $self->control_socket(Hydrangea::ControlSocket->new(...));
-  ...
 }
 
 sub receive_message ($self, $from, $msg) {
@@ -48,6 +103,9 @@ sub send_message ($self, $to, $msg) {
   $self->emit('send_message', $to, $msg);
 }
 
-## These are probably ::Node methods or ::Role::Node methods or something
+sub run ($self) {
+  $self->control_port->start;
+  $self->start_supervisors;
+}
 
 1;

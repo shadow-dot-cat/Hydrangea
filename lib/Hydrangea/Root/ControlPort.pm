@@ -21,7 +21,7 @@ lazy listener => sub ($self) {
 
 sub incoming_stream ($self, $stream) {
   my $conn = use_module('Hydrangea::Root::ControlPort::Connection')->new(
-    root => $self->root,
+    node => $self->root,
     stream => $stream,
   );
   $self->_streams->{$stream} = $stream;
