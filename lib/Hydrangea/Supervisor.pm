@@ -48,21 +48,19 @@ sub _trigger_starting_f ($self, $f) {
   $f->on_done($self->curry::weak::_set_running_f);
 }
 
+sub _trigger_running_f {}
+sub _trigger_stopping_f {}
+
 sub wrap ($class, $service, @rest) {
   $class->new(service => $service, @rest);
 }
 
-sub once ($self) {
+sub start_once ($self) {
   return Future->done($self->running_f) if $self->running_f;
   $self->starting_f || $self->_set_starting_f($self->service->start);
 }
 
-sub stop ($self) {
-  return Future->done unless $self->running_f;
-  $self->stopping_f || $self->_set_stopping_f($self->service->stop);
-}
-
-sub up ($self) {
+sub supervise ($self) {
   $self->supervising_f;
   return;
 }
@@ -72,11 +70,25 @@ sub cancel_supervising_f ($self) {
   return;
 }
 
-sub down ($self) {
+sub stop ($self) {
   $self->cancel_supervising_f;
   return unless $self->running_f; # starting_f, unsure atm, must revisit XXX
-  $self->stop;
+  $self->_stop;
   return;
+}
+
+sub _stop ($self) {
+  return Future->done unless $self->running_f;
+  $self->stopping_f || $self->_set_stopping_f($self->service->stop);
+}
+
+sub restart ($self) {
+  return unless $self->running_f; # can't restart it if it isn't running XXX
+  my $stop_f = $self->_stop;
+  # theoretical bug - this will done() when the stop is complete and if the
+  # supervisor then can't start it, it'll appear to've worked but died
+  return $stop_f if $self->supervising_f;
+  return $stop_f->then(sub { $self->start });
 }
 
 sub _build_supervising_f ($self) {

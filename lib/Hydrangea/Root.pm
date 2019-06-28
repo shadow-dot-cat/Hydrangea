@@ -32,12 +32,6 @@ lazy service_spec => sub ($self) {
   };
 };
 
-sub _build_services ($self) {
-  return +{
-    map +($_ => $self->_construct_service($_)), keys %{$self->service_spec}
-  };
-}
-
 sub _construct_service ($self, $name) {
   my $service_spec = $self->service_spec->{$name};
   my $config_spec = use_module($service_spec)->config_spec;
@@ -92,6 +86,9 @@ lazy control_port => sub ($self) {
 };
 
 sub BUILD ($self, $) {
+  foreach my $k (sort keys %{$self->service_spec}) {
+    $self->service($k, $self->_construct_service($k));
+  }
   my $cc = $self->chat_service;
   $cc->on(receive_message => $self->curry::weak::receive_message);
   $self->on(send_message => $cc->curry::weak::send_message);

@@ -16,9 +16,17 @@ around hcl_commands => sub ($orig, $self, @) {
 };
 
 sub cmd_service ($self, $service, @cmd) {
-  die "No such service ${service}" unless $self->node->has_service($service);
+  unless ($self->node->has_service($service)) {
+    $self->say("Invalid service name ${service}");
+    return;
+  }
   my ($cmd, @args) = @cmd;
-  $self->node->$service->$cmd(@args);
+  unless ($cmd =~ /^(?:supervise|once|stop|restart)$/) {
+    $self->say("Invalid command ${cmd} for service ${service}");
+    return;
+  }
+  $cmd = 'start_once' if $cmd eq 'once';
+  $self->node->supervisors->{$service}->$cmd(@args);
 }
 
 rw _sub_ids => (default => sub { {} });

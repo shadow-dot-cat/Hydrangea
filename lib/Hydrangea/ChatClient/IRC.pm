@@ -56,16 +56,23 @@ sub DEMOLISH ($self, $gd) {
   loop_remove($self->irc)
 }
 
-sub closed ($self) { $self->clear_run_f->fail }
+sub closed ($self, @) { $self->clear_run_f->fail("closed") }
 
 lazy run_f => sub { Future->new }, clearer => 1;
 
 sub start ($self) {
   my $run_f = $self->run_f;
+  log info => "Starting IRC root";
   $self->irc
-       ->connect(host => $self->server, service => $self->port)
+       ->login(host => $self->server, service => $self->port)
        ->on_done($self->curry::weak::sync)
-       ->then(sub { Future->done($run_f) });
+       ->then(sub {
+           log info => "IRC root up";
+           Future->done($run_f);
+         }, sub ($error) {
+           log error => "IRC root start failed: $error";
+           Future->fail($error);
+         });
 }
 
 sub stop ($self) {
@@ -74,12 +81,13 @@ sub stop ($self) {
   Future->done;
 }
 
-sub sync ($self) {
+sub sync ($self, @) {
   # if not on preferred nick, attempt to change nick
   # send join messages for all configured channels
 }
 
 sub receive_message ($self, $, $message, $hints) {
+  return if $hints->{is_notice}; # for the moment
   my @msg = (
     {
        venue => $hints->{target_name},
