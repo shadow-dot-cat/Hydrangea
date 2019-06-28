@@ -94,7 +94,7 @@ sub BUILD ($self, $) {
   $self->on(send_message => $cc->curry::weak::send_message);
 }
 
-sub receive_message ($self, $from, $msg) {
+sub receive_message ($self, $, $from, $msg) {
   $self->emit('message_to_me', $from, $msg) if $msg->{is_to_me};
   $self->emit('message_seen', $from, $msg);
 }

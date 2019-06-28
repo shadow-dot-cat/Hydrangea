@@ -100,4 +100,6 @@ sub receive_message ($self, $, $message, $hints) {
   $self->emit(receive_message => @msg);
 }
 
+sub infer_user_from { undef }
+
 1;
