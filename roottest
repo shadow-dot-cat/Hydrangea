@@ -1,0 +1,15 @@
+use lib 'lib';
+use strictures 2;
+use Hydrangea::Root;
+use Hydrangea::Loop;
+
+my $root = Hydrangea::Root->new(
+  base_dir => $ENV{PWD},
+  name => 'spong',
+  chat_client_type => 'IRC',
+  control_port_class => 'Hydrangea::STDIOControlPort',
+);
+
+$root->start;
+
+$Loop->run;

@@ -1,7 +1,7 @@
 package Hydrangea::Root;
 
 use JSON::Dumper::Compact;
-use Mojo::File;
+use Mojo::File qw(path);
 use Hydrangea::Class;
 
 with 'Role::EventEmitter';
@@ -43,7 +43,7 @@ sub _construct_service ($self, $name) {
   my $config_spec = use_module($service_spec)->config_spec;
   my $this_config = $self->config->{$name};
   $self->validate_config($this_config, $config_spec);
-  return $service_spec->new($this_config);
+  return $service_spec->new($this_config||());
 }
 
 sub validate_config {
@@ -71,7 +71,12 @@ lazy config_file => sub ($self) {
 };
 
 lazy config => sub ($self) {
-  my $conf = do { local (@ARGV, $/) = ($self->config_file); <> };
+  my $file = $self->config_file;
+  unless (-f $file) {
+    log warn => "Config file ${file} does not exist";
+    return {};
+  }
+  my $conf = do { local (@ARGV, $/) = ($file); <> };
   JSON::Dumper::Compact->decode($conf);
 };
 
@@ -80,15 +85,13 @@ lazy control_socket => sub ($self) {
     ->file($self->file_base.'.sock');
 };
 
+lazy control_port_class => sub { 'Hydrangea::ControlPort' };
+
 lazy control_port => sub ($self) {
-  my $path = ''.$self->control_socket;
-  Hydrangea::Root::ControlPort->new(
-    root => $self,
-    path => $path
-  );
+  use_module($self->control_port_class)->new(node => $self);
 };
 
-sub BUILD ($self) {
+sub BUILD ($self, $) {
   my $cc = $self->chat_service;
   $cc->on(receive_message => $self->curry::weak::receive_message);
   $self->on(send_message => $cc->curry::weak::send_message);
@@ -103,7 +106,7 @@ sub send_message ($self, $to, $msg) {
   $self->emit('send_message', $to, $msg);
 }
 
-sub run ($self) {
+sub start ($self) {
   $self->control_port->start;
   $self->start_supervisors;
 }

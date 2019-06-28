@@ -39,22 +39,40 @@ sub cmd_unsubscribe ($self, $event) {
 }
 
 sub cmd_config ($self, @config) {
+  unless (@config) {
+    $self->say("config [service] ([name] [value]?)?");
+    return;
+  }
   if (my $meth = $self->can("_cmd_config_$config[0]")) {
     shift @config;
     return $self->$meth(@config);
   }
-  my ($svc, $name, $value) = @config;
-  my $existing = $self->config;
-  my $cfg_spec = $self->config_spec;
-  my $this_spec = $cfg_spec->{$svc}{$name};
-  die "No such attribute ${svc}.${name}\n" unless $this_spec;
-  if (defined(my $err = $this_spec->{isa}->validate($value))) {
-    die "Config value ${svc}.${name} invalid: ${err}";
+  my ($svc, $name, @rest) = @config;
+  my $existing = $self->node->config->{$svc};
+  my $service = $self->node->service($svc);
+  my $svc_cfg = $service->config_spec;
+  unless ($name) {
+    $self->say("${svc} $_ ".$service->$_) for sort keys %{$svc_cfg};
+    return;
   }
-  my $prev = $self->node->$svc->$name;
+  my $cfg_spec = $svc_cfg->{$name};
+  unless ($cfg_spec) {
+    $self->say("Config name ${svc}.${name} invalid");
+    return;
+  }
+  unless (@rest) {
+    $self->say("${svc} ${name} ".$service->$name);
+    return;
+  }
+  my ($value) = @rest;
+  if (defined(my $err = $cfg_spec->{isa}->validate($value))) {
+    $self->say("Config value ${svc}.${name} invalid: ${err}");
+    return;
+  }
+  my $prev = $service->$name;
   push(
     @{$self->tx->{changes}},
-    [ $svc, $name, $prev, $value, $this_spec ],
+    [ $svc, $name, $prev, $value, $cfg_spec ],
   );
   return;
 }
