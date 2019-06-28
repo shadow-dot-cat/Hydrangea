@@ -95,6 +95,9 @@ sub receive_message ($self, $, $message, $hints) {
        user => $self->infer_user_from($hints),
     },
     {
+      raw_text => $hints->{text},
+      text => $hints->{text},
+      is_to_me => $hints->{target_is_me},
     }
   );
   $self->emit(receive_message => @msg);

@@ -38,7 +38,7 @@ sub DEMOLISH ($self, $gd) {
 
 sub cmd_subscribe ($self, $event) {
   $self->_sub_ids->{$event} = $self->node->on(
-    $event => sub { shift; $self->say(jdc(@_)) },
+    $event => sub { shift; $self->say(jdc(\@_)) },
   );
   return;
 }
