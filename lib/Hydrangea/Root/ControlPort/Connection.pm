@@ -73,8 +73,12 @@ sub cmd_config ($self, @config) {
     $self->say("${svc} ${name} ".$service->$name);
     return;
   }
+  unless ($self->has_tx) {
+    $self->say("Config is read only outside a transaction");
+    return;
+  }
   my ($value) = @rest;
-  if (defined(my $err = $cfg_spec->{isa}->validate($value))) {
+  if (defined(my $err = $cfg_spec->{type}->validate($value))) {
     $self->say("Config value ${svc}.${name} invalid: ${err}");
     return;
   }
@@ -84,6 +88,10 @@ sub cmd_config ($self, @config) {
     [ $svc, $name, $prev, $value, $cfg_spec ],
   );
   return;
+}
+
+sub _cmd_config_save ($self) {
+  $self->node->save_config;
 }
 
 sub _cmd_config_tx ($self, $cmd = 'status', @args) {
@@ -111,6 +119,7 @@ sub _traverse_tx ($self, %cb) {
     $cb{change}($svc, $prop, $old, $new);
     $sync{$svc}{$spec->{requires}} = 1;
   }
+  return unless $cb{apply};
   foreach my $set (sort keys %sync) {
     $cb{apply}($set => [ sort keys %{$sync{$set}||{}} ]);
   }
@@ -142,15 +151,16 @@ sub _cmd_config_tx_commit ($self) {
   $self->_traverse_tx(
     change => sub ($svc, $prop, $old, $new) {
       die "Concurrency error; bailing out\n"
-        unless $self->node->$svc->$prop eq $old;
+        unless $self->node->service($svc)->$prop eq $old;
     }
   );
   $self->_traverse_tx(
     change => sub ($svc, $prop, $old, $new) {
-      $self->node->$svc->$prop($new);
+      $self->node->service($svc)->$prop($new);
+      $self->node->config->{$svc}{$prop} = $new;
     },
     apply => sub ($svc, @sync) {
-      $svc->apply(@sync);
+      $self->node->service($svc)->apply(@sync);
     },
   );
   $self->clear_tx;
@@ -158,7 +168,8 @@ sub _cmd_config_tx_commit ($self) {
 }
 
 sub say ($self, $to_say) {
-  $self->stream->write($to_say."\n");
+  ($to_say = $to_say."\n") =~ s/\n\n\Z/\n/;
+  $self->stream->write($to_say);
 }
 
 sub cmd_send ($self, $to, $msg) {

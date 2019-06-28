@@ -70,9 +70,14 @@ lazy config => sub ($self) {
     log warn => "Config file ${file} does not exist";
     return {};
   }
-  my $conf = do { local (@ARGV, $/) = ($file); <> };
+  my $conf = path($file)->slurp;
   JSON::Dumper::Compact->decode($conf);
 };
+
+sub save_config ($self) {
+  path($self->config_file)
+    ->spurt(JSON::Dumper::Compact->encode($self->config));
+}
 
 lazy control_socket => sub ($self) {
   path($self->base_dir)->child('var', 'run')->mkpath
