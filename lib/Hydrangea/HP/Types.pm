@@ -8,11 +8,11 @@ use Type::Utils -all;
 declare JBool => InstanceOf['JSON::PP::Boolean'] | ScalarRef[Bool];
 
 declare Client_Protocol_Offer => Tuple[
-  protocol_offer => hydrangea => Int
+  protocol_offer => hydrangea => Num
 ];
 
 declare Trunk_Protocol_Accept => Tuple[
-  protocol_accept => hydrangea => Int
+  protocol_accept => hydrangea => Num
 ];
 
 declare Client_Message_From => Tuple[
