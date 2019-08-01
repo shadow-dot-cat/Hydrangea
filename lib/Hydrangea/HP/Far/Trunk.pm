@@ -2,8 +2,6 @@ package Hydrangea::HP::Far::Trunk;
 
 use Hydrangea::Class;
 
-ro 'connection';
-ro 'root';
 ro commands => (default => sub { {} });
 ro ci => (default => sub { {} });
 
@@ -17,10 +15,10 @@ sub command_done ($self, @args) { $self->_send(command_done => @args) }
 sub command_failed ($self, @args) { $self->_send(command_failed => @args) }
 
 sub _type { 'client' }
-sub _rtype { 'trunk' }
+sub _far_type { 'trunk' }
 
 sub _handle_message_to ($self, @msg) {
-  $self->root->send_message(@msg);
+  $self->node->send_message(@msg);
 }
 
 sub _handle_command_start ($self, $tx_id, $name, @args) {

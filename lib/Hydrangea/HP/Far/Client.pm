@@ -3,8 +3,8 @@ package Hydrangea::HP::Far::Client;
 use Hydrangea::Class;
 use Hydrangea::HP::Far::CommandInvocation;
 
-ro 'connection';
-ro 'node';
+ro 'far_nodename';
+
 ro rci => (default => sub { {} });
 
 ro curr_tx_id => (default => 'A000');
@@ -12,7 +12,7 @@ ro curr_tx_id => (default => 'A000');
 sub next_tx_id ($self) { ++$self->{curr_tx_id} }
 
 sub _type { 'client' }
-sub _rtype { 'trunk' }
+sub _far_type { 'trunk' }
 
 with 'Hydrangea::HP::Role::FarObject';
 
@@ -27,20 +27,13 @@ sub command_start ($self, @args) {
   );
 }
 
-sub _command_send ($self, @args) { $self->_send(command_send => @args) }
-sub _command_cancel ($self, @args) { $self->_send(command_cancel => @args) }
+sub _command_send { shift->_send(command_send => @_) }
+sub _command_cancel { shift->_send(command_cancel => @_) }
 
-sub _handle_message_from ($self, @msg) {
-  $self->node->receive_message(@msg);
-}
+sub _call ($self, $m, @args) { $self->node->$m($self->far_nodename, @args) }
 
-sub _handle_command_register ($self, $cmd) {
-  $self->node->register_command($self->connection->nodename, $cmd);
-}
-
-sub _handle_command_sent ($self, $tx_id, $sent) {
-  $self->rci->{$tx_id}->_sent($sent);
-}
+sub _handle_message_from { shift->_call(receive_message => @_) }
+sub _handle_command_register { shift->_call(register_command => @_) }
 
 sub _handle_command_done ($self, $tx_id, $done = undef) {
   (delete $self->rci->{$tx_id})->_done($done);

@@ -2,11 +2,11 @@ package Hydrangea::MojoFutureDo;
 
 use strictures 2;
 use experimental 'signatures';
-use Future;
+use Future::Mojo;
 use Mojo::Promise::Role::Futurify;
 use Exporter 'import';
 
-our @EXPORT = qw($_do);
+our @EXPORT = qw($_do $_once);
 
 our $_do = sub ($self, $method, @args) {
   if (my $p = $self->can("${method}_p")) {
@@ -23,6 +23,10 @@ our $_do = sub ($self, $method, @args) {
     return
   });
   return $f;
+};
+
+our $_once = sub ($self, $name) {
+  (grep $self->once($name => $_->done_cb), Future::Mojo->new)[0]
 };
 
 1;

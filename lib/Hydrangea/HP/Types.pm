@@ -15,6 +15,14 @@ declare Trunk_Protocol_Accept => Tuple[
   protocol_accept => hydrangea => Num
 ];
 
+declare Client_Ident_Assert => Tuple[
+  ident_assert => Str, Str
+];
+
+declare Trunk_Ident_Confirm => Tuple[
+  ident_confirm => Str
+];
+
 declare Client_Message_From => Tuple[
   message_from
     => Dict[ venue => Optional[Str], nick => Str, user => Optional[Str] ]

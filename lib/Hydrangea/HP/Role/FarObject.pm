@@ -3,10 +3,17 @@ package Hydrangea::HP::Role::FarObject;
 use Hydrangea::Role;
 use Hydrangea::HP::Types;
 
+has 'connection';
+has 'node';
+
 requires '_type';
-requires '_rtype';
+requires '_far_type';
 
 lazy type_meta => sub { Hydrangea::HP::Types->meta };
+
+sub BUILD ($self, $) {
+  $self->connection->on(json => $self->curry::handle);
+}
 
 sub __lookup_type ($self, $end, $name) {
   my $name = join '_', map ucfirst, $self->$end, split '_', $name;
@@ -14,7 +21,7 @@ sub __lookup_type ($self, $end, $name) {
 }
 
 sub _lookup_type ($self, $name) { $self->__lookup_type('_type', $name) }
-sub _lookup_rtype ($self, $name) { $self->__lookup_type('_rtype', $name) }
+sub _lookup_far_type ($self, $name) { $self->__lookup_type('_far_type', $name) }
 
 sub _send ($self, $message_name, @args) {
   my @msg = ($message_name, @args);
@@ -22,13 +29,13 @@ sub _send ($self, $message_name, @args) {
     log error => 'Invalid message';
     return;
   }
-  $self->connection->send(\@msg);
+  $self->connection->send({ json => \@msg });
   return;
 }
 
-sub handle ($self, $message_name, @args) {
+sub handle ($self, $, $message_name, @args) {
   my @msg = ($message_name, @args);
-  unless ($self->_lookup_rtype($message_name)->check(\@msg)) {
+  unless ($self->_lookup_far_type($message_name)->check(\@msg)) {
     log error => 'Invalid message';
     return;
   }
