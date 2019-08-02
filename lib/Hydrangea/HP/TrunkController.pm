@@ -3,6 +3,7 @@ package Hydrangea::HP::TrunkController;
 use Mojo::Base 'Mojolicious::Controller';
 use Hydrangea::HP;
 use Hydrangea::HP::Far::Client;
+use List::Util qw(reduce);
 use Hydrangea::Package;
 
 has 'start_f';

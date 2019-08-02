@@ -2,7 +2,8 @@ package Hydrange::HP::Connector;
 
 use Mojo::URL;
 use List::Util qw(reduce);
-use Hydrangea::Utils qw(match_pw);
+#use Hydrangea::Utils qw(match_pw);
+sub match_pw { die "unimplemented" }
 use Hydrangea::HP;
 use Hydrangea::HP::Far::Trunk;
 use Hydrangea::Class;
@@ -31,7 +32,7 @@ sub connect ($self) {
   # Sequence: connect websocket, negotiate protocol, authenticate, setup
   reduce { $a->then($b) }
     $self->ua->$_do(websocket => $self->_trunk_url),
-      map { my $m = $_; sub { $self->$m(@_) } qw(negotiate auth setup)
+      map { my $m = $_; sub { $self->$m(@_) } } qw(negotiate auth setup)
 }
 
 sub negotiate ($self, $conn) {
@@ -42,7 +43,7 @@ sub negotiate ($self, $conn) {
              is_Trunk_Protocol_Accept($msg)
              and $msg->[-1] eq '0.2019073000'
            ) {
-             return Future->done($connection);
+             return Future->done($conn);
            }
            return Future->fail("Protocol negotiation error");
          })
