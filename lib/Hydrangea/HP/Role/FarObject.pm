@@ -1,10 +1,10 @@
 package Hydrangea::HP::Role::FarObject;
 
-use Hydrangea::Role;
 use Hydrangea::HP::Types;
+use Hydrangea::Role;
 
-has 'connection';
-has 'node';
+ro 'connection';
+ro 'node';
 
 requires '_type';
 requires '_far_type';
@@ -15,8 +15,8 @@ sub BUILD ($self, $) {
   $self->connection->on(json => $self->curry::handle);
 }
 
-sub __lookup_type ($self, $end, $name) {
-  my $name = join '_', map ucfirst, $self->$end, split '_', $name;
+sub __lookup_type ($self, $end, $raw_name) {
+  my $name = join '_', map ucfirst, $self->$end, split '_', $raw_name;
   $self->type_meta->get_type($name);
 }
 
