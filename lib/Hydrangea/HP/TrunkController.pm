@@ -12,13 +12,18 @@ has 'far_object';
 
 sub start ($self) {
   $self->start_f(
-    reduce { $a->then($b) } Future::Mojo->done,
-      map { my $m = $_; sub { $self->$m } } qw(negotiate auth setup)
-  )->on_ready(sub { $self->start_f(undef) });
+    $self->negotiate
+         ->then(sub ($s, @args) { $s->auth(@args) })
+         ->then(sub ($s, @args) { $s->setup(@args) })
+         ->on_ready(sub { $self->start_f(undef) })
+  );
+  return;
 }
 
 sub negotiate ($self) {
-  $self->$_once('json')
+  my $tx = $self->tx;
+  $self->rendered(101) if $tx->is_websocket && !$tx->established;
+  $self->tx->$_once('json')
        ->then(sub ($msg) {
            if (
              is_Client_Protocol_Offer($msg)
@@ -34,7 +39,7 @@ sub negotiate ($self) {
 }
 
 sub auth ($self) {
-  $self->$_once('json')
+  $self->tx->$_once('json')
        ->then(sub ($msg) {
            if (is_Client_Ident_Assert($msg)) {
              my ($name, $pw) = @{$msg}[1,2];
