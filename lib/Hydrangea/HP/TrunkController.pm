@@ -21,6 +21,9 @@ sub start ($self) {
 }
 
 sub negotiate ($self) {
+  # Remember to make jberger help you with websocket subprotocol support as an
+  # alternative option for people who know websockets and aren't trying to adapt
+  # code that speaks the unix socket protocol
   my $tx = $self->tx;
   $self->rendered(101) if $tx->is_websocket && !$tx->established;
   $self->tx->$_once('json')
