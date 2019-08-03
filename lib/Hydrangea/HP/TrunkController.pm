@@ -2,77 +2,78 @@ package Hydrangea::HP::TrunkController;
 
 use Mojo::Base 'Mojolicious::Controller';
 use Hydrangea::HP;
-use Hydrangea::HP::Far::Client;
-use List::Util qw(reduce);
+use Hydrangea::HP::Types qw(:all);
 use Hydrangea::Package;
+use namespace::clean;
 
-has 'start_f';
+has state => sub { 'negotiate' };
 
-has 'far_object';
+has sub_id => sub ($self) {
+  $self->on(json => sub ($, $data) { $self->on_message($data) });
+};
+
+has 'far';
 
 sub start ($self) {
-  $self->start_f(
-    $self->negotiate
-         ->then(sub ($s, @args) { $s->auth(@args) })
-         ->then(sub ($s, @args) { $s->setup(@args) })
-         ->on_ready(sub { $self->start_f(undef) })
-  );
+  $self->sub_id;
   return;
 }
 
-sub negotiate ($self) {
+sub on_message ($self, $data) {
+  $self->${\"on_${\$self->state}"}($data);
+}
+
+sub on_negotiate ($self, $msg) {
   # Remember to make jberger help you with websocket subprotocol support as an
   # alternative option for people who know websockets and aren't trying to adapt
   # code that speaks the unix socket protocol
-  my $tx = $self->tx;
-  $self->rendered(101) if $tx->is_websocket && !$tx->established;
-  $self->tx->$_once('json')
-       ->then(sub ($msg) {
-           if (
-             is_Client_Protocol_Offer($msg)
-             and $msg->[-1] eq $HP_VERSION
-           ) {
-             $self->send({ json => [
-               protocol_accept => hydrangea => '0.2019073000'
-             ] });
-             return Future->done;
-           }
-           return Future->fail("Protocol negotiation error");
-         })
+  if (is_Client_Protocol_Offer($msg)) {
+    if ($msg->[-1] eq $HP_VERSION) {
+      $self->send({ json => [
+        protocol_accept => hydrangea => $HP_VERSION
+      ] });
+      $self->state('authenticate');
+      return;
+    } else {
+      log error => "Unknown version ${\($msg->[-1])}";
+    }
+  } else {
+    log error =>
+      "Invalid negotiation packet: "
+        .(Client_Protocol_Offer->validate($msg))
+    ;
+  }
+  $self->send({ json => [ 'protocol_fail' ] });
+  $self->finish;
 }
 
-sub auth ($self) {
-  $self->tx->$_once('json')
-       ->then(sub ($msg) {
-           if (is_Client_Ident_Assert($msg)) {
-             my ($name, $pw) = @{$msg}[1,2];
-             if (my $node = $self->known_nodes->{$name}) {
-               if (match_pw($node->{far_hash}, $pw)) {
-                 $self->send({ json => [
-                   ident_confirm => $node->{my_pw}
-                 ] });
-                 return Future->done($name);
-               }
-             }
-           }
-           return Future->fail("Authentication error");
-         })
+sub on_authenticate ($self, $msg) {
+  if (is_Client_Ident_Assert($msg)) {
+    my ($name, $pw) = @{$msg}[1,2];
+    if (my $node = $self->known_nodes->{$name}) {
+      if (match_pw($node->{far_hash}, $pw)) {
+        $self->send({ json => [
+          ident_confirm => $node->{my_pw}
+        ] });
+        $self->setup_for($name);
+        $self->state('far');
+      }
+    }
+  }
+  $self->send({ json => [ 'ident_fail' ] });
+  $self->finish;
 }
 
-sub setup ($self, $name) {
-  Future->done($self->adopt_far_object(Hydrangea::HP::Far::Client->new(
+sub setup_for ($self, $name) {
+  $self->far(Hydrangea::HP::Far::Client->new(
     connection => $self->tx,
     node => $self->node,
     far_nodename => $name,
-  )));
+  ));
 }
 
-sub adopt_far_object ($self, $far) {
-  my $connected = $self->node->connected_nodes;
-  my $name = $far->far_nodename;
-  $self->on(finish => sub { delete $connected->{$name} });
-  $connected->{$name} = $far;
-  $self->far_object($far);
+sub on_far ($self, $msg) {
+  $self->far->handle($msg);
 }
 
 1;

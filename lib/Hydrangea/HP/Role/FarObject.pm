@@ -33,9 +33,9 @@ sub _send ($self, $message_name, @args) {
   return;
 }
 
-sub handle ($self, $, $message_name, @args) {
-  my @msg = ($message_name, @args);
-  unless ($self->_lookup_far_type($message_name)->check(\@msg)) {
+sub handle ($self, $msg) {
+  my ($message_name, @args) = @$msg;
+  unless ($self->_lookup_far_type($message_name)->check($msg)) {
     log error => 'Invalid message';
     return;
   }

@@ -1,4 +1,4 @@
-package Hydrange::HP::Types;
+package Hydrangea::HP::Types;
 
 use Hydrangea::Package;
 use Type::Library -base, -declare => 'JBool';
