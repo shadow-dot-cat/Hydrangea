@@ -11,10 +11,6 @@ requires '_far_type';
 
 lazy type_meta => sub { Hydrangea::HP::Types->meta };
 
-sub BUILD ($self, $) {
-  $self->connection->on(json => $self->curry::handle);
-}
-
 sub __lookup_type ($self, $end, $raw_name) {
   my $name = join '_', map ucfirst, $self->$end, split '_', $raw_name;
   $self->type_meta->get_type($name);

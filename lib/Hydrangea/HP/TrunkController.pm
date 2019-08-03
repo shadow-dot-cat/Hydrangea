@@ -1,8 +1,10 @@
 package Hydrangea::HP::TrunkController;
 
 use Mojo::Base 'Mojolicious::Controller';
+use Hydrangea::Utils qw(match_pw);
 use Hydrangea::HP;
 use Hydrangea::HP::Types qw(:all);
+use Hydrangea::HP::Far::Client;
 use Hydrangea::Package;
 use namespace::clean;
 
