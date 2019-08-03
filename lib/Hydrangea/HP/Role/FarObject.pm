@@ -20,19 +20,23 @@ sub _lookup_type ($self, $name) { $self->__lookup_type('_type', $name) }
 sub _lookup_far_type ($self, $name) { $self->__lookup_type('_far_type', $name) }
 
 sub _send ($self, $message_name, @args) {
-  my @msg = ($message_name, @args);
-  unless ($self->_lookup_type($message_name)->check(\@msg)) {
-    log error => 'Invalid message';
+  my $msg = [ $message_name, @args ];
+  unless ((my $type = $self->_lookup_far_type($message_name))->check($msg)) {
+    log error =>
+      'Invalid message (send): '
+        .join("\n", @{$type->validate_explain($msg)});
     return;
   }
-  $self->connection->send({ json => \@msg });
+  $self->connection->send({ json => $msg });
   return;
 }
 
 sub handle ($self, $msg) {
   my ($message_name, @args) = @$msg;
-  unless ($self->_lookup_far_type($message_name)->check($msg)) {
-    log error => 'Invalid message';
+  unless ((my $type = $self->_lookup_type($message_name))->check($msg)) {
+    log error =>
+      'Invalid message (receive): '
+        .join("\n", @{$type->validate_explain($msg)});
     return;
   }
   $self->${\"_handle_${message_name}"}(@args);

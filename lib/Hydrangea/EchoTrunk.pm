@@ -8,7 +8,7 @@ sub register_command {}
 
 sub receive_message ($self, $node, $from, $msg) {
   $self->connected_nodes->{$node}->message_to(
-    { %{$from}{grep exists $from->{$_}, qw(venue user)} },
+    { %{$from}{grep exists $from->{$_}, qw(venue nick)} },
     { %{$msg}{qw(text)}, is_address => \1 },
   );
 }

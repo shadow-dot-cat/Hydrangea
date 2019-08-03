@@ -40,7 +40,7 @@ declare Client_Message_From => as Tuple[
 declare Trunk_Message_To => as Tuple[
   message_to
     => Dict[ venue => Optional[Str], nick => Str ]
-    => Str
+    => Dict[ text => Str, is_address => JBool ]
 ];
 
 declare Client_Command_Register => as Tuple[ command_register => Str ];

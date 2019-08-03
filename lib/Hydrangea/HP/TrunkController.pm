@@ -57,8 +57,9 @@ sub on_authenticate ($self, $msg) {
         $self->send({ json => [
           ident_confirm => $node->{my_pw}
         ] });
-        $self->setup_for($name);
+        $self->node->connected_nodes->{$name} = $self->setup_for($name);
         $self->state('far');
+        return;
       }
     }
   }
@@ -67,14 +68,16 @@ sub on_authenticate ($self, $msg) {
 }
 
 sub setup_for ($self, $name) {
-  $self->far(Hydrangea::HP::Far::Client->new(
+  $self->far(my $far = Hydrangea::HP::Far::Client->new(
     connection => $self->tx,
     node => $self->node,
     far_nodename => $name,
   ));
+  return $far;
 }
 
 sub on_far ($self, $msg) {
+#::Dwarn($msg);
   $self->far->handle($msg);
 }
 

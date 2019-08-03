@@ -24,6 +24,14 @@ $t->websocket_ok('/api/echo')
   ->json_message_is([ protocol_accept => hydrangea => $HP_VERSION ])
   ->send_ok({ json => [ ident_assert => $node_name, $my_pw ] })
   ->message_ok
-  ->json_message_is([ ident_confirm => $far_pw ]);
+  ->json_message_is([ ident_confirm => $far_pw ])
+  ->send_ok({ json => [
+      message_from => { nick => 'mst' },
+      { raw_text => 'argh', text => 'argh', is_to_me => \1 }
+    ] })
+  ->message_ok
+  ->json_message_is([
+      message_to => { nick => 'mst' }, { text => 'argh', is_address => 1 }
+    ]);
 
 done_testing;
