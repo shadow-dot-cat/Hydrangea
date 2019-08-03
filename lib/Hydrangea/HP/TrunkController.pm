@@ -40,7 +40,7 @@ sub on_negotiate ($self, $msg) {
   } else {
     log error =>
       "Invalid negotiation packet: "
-        .(Client_Protocol_Offer->validate($msg))
+        .join("\n", @{Client_Protocol_Offer->validate_explain($msg)})
     ;
   }
   $self->send({ json => [ 'protocol_fail' ] });

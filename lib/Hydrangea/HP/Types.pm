@@ -9,7 +9,7 @@ BEGIN {
   no warnings 'redefine';
   my $tuple = __PACKAGE__->can('Tuple');
   *Tuple = sub :prototype(;$) {
-    $tuple->([ map +(ref($_) ? $_ : Enum[$_]), @$_ ]);
+    $tuple->([ map +(ref($_) ? $_ : Enum[$_]), @{$_[0]} ]);
   }
 }
 
